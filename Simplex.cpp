@@ -174,6 +174,7 @@ typedef struct
         this->matriz_ppl.nm_matriz = "Problema de programação linear";
         string nr_variavel, nr_restricao, linha_lida;
 
+        int negativo = 0;
         cout << "Iniciando leitura do arquivo " << nm_arquivo << endl;
         ifstream arq(nm_arquivo, ios::in); // nm_arquivo é o caminho para o arquivo
 
@@ -193,7 +194,7 @@ typedef struct
         this->nr_variavel = stoi(nr_variavel);
 
         this->matriz_ppl.instanciar(this->nr_restricao + 1, this->nr_variavel + 2);
-        cout << "colunas" << matriz_ppl.nr_colunas << endl;
+        cout << "colunas " << matriz_ppl.nr_colunas << endl;
         int linha = 0, coluna = 0;
         cout << "Lendo dados e gerando da matriz do problema" << endl;
         // busca os vertices no arquivo e coloca em uma matriz numero-nr_restricaos x 2
@@ -207,7 +208,11 @@ typedef struct
                 this->in_tudo_certo = false;
                 return;
             }
-            if (caracter != ',' && caracter != ';')
+            if (caracter == 45)
+            {
+                negativo = 1;
+            }
+            else if (caracter != ',' && caracter != ';')
             {
                 // Cria string temporaria para poder converter o valor do char lido para inteiro.
                 string temp_string;
@@ -216,6 +221,11 @@ typedef struct
             }
             else if (caracter != ';' && coluna < matriz_ppl.nr_colunas)
             {
+                if (negativo == 1)
+                {
+                    this->matriz_ppl.matriz[linha][coluna] = (this->matriz_ppl.matriz[linha][coluna] * (-1));
+                    negativo = 0;
+                }
                 coluna++;
             }
             else if (caracter == ',' && coluna >= matriz_ppl.nr_colunas)
@@ -271,65 +281,6 @@ typedef struct
     //         };
     //     }
     // }
-
-    // void gerar_matriz_adjacencias()
-    // {
-    //     // cout << "Gerando matriz de adjacencias" << endl;
-    //     this->matriz_adj.instanciar(this->nr_variavel, this->nr_variavel);
-
-    //     // insere os valores da matriz de ligação na matriz de adjacências
-    //     for (int i = 0; i < this->matriz_ligacao.nr_linhas; i++)
-    //     {
-    //         // a matriz adjacente no indice q esta sendo lido na matriz de ligação -1 recebe 1
-    //         this->matriz_adj.matriz[this->matriz_ligacao.matriz[i][0] - 1][this->matriz_ligacao.matriz[i][1] - 1] = 1;
-    //         this->matriz_adj.matriz[this->matriz_ligacao.matriz[i][1] - 1][this->matriz_ligacao.matriz[i][0] - 1] = 1;
-    //     }
-    //     cout << "Matriz de adjacencias gerada" << endl;
-    // }
-    // void gerar_matriz_adjacencias_ponderada()
-    // {
-    //     // cout << "Gerando matriz de adjacencias" << endl;
-    //     this->matriz_adj_ponderada.instanciar(this->nr_variavel, this->nr_variavel);
-
-    //     // insere os valores da matriz de ligação na matriz de adjacências
-    //     for (int i = 0; i < this->matriz_ligacao_ponderada.nr_linhas; i++)
-    //     {
-    //         // matriz ponderada
-    //         // no indice lido na matriz de ligação -1 eu insiro o peso da nr_restricao daquela ligação
-    //         this->matriz_adj_ponderada.matriz[this->matriz_ligacao.matriz[i][0] - 1][this->matriz_ligacao.matriz[i][1] - 1] = this->matriz_ligacao_ponderada.matriz[i][2];
-    //         this->matriz_adj_ponderada.matriz[this->matriz_ligacao.matriz[i][1] - 1][this->matriz_ligacao.matriz[i][0] - 1] = this->matriz_ligacao_ponderada.matriz[i][2];
-    //     }
-    //     cout << "Matriz de adjacencias ponderada gerada" << endl;
-    // }
-    // void gerar_matriz_incidencias()
-    // {
-    //     // cout << "Gerando matriz de incidencias" << endl;
-    //     this->matriz_inc.instanciar(this->nr_restricao, this->nr_variavel);
-    //     // insere os valores da matriz de ligação na matriz de incidências
-    //     for (int i = 0; i < this->matriz_ligacao.nr_linhas; i++)
-    //     {
-    //         this->matriz_inc.matriz[i][this->matriz_ligacao.matriz[i][0] - 1] = 1;
-    //         this->matriz_inc.matriz[i][this->matriz_ligacao.matriz[i][1] - 1] = 1;
-    //     }
-    //     cout << "Matriz de incidencias gerada" << endl;
-    // }
-    void imprime_grafo()
-    {
-        if (!this->in_tudo_certo)
-        {
-            cout << "Grafo com problemas." << endl;
-        }
-        cout << "Imprimindo Grafo: " << endl;
-        cout << "Vertices: " << this->nr_variavel << endl;
-        cout << "nr_restricaos: " << this->nr_restricao << endl;
-
-        // this->matriz_ligacao.imprimir_matriz();
-        // this->matriz_adj.imprimir_matriz();
-        // this->matriz_adj_ponderada.imprimir_matriz();
-        // this->matriz_inc.imprimir_matriz();
-        // this->matriz_ligacao_ponderada.imprimir_matriz();
-        // this->matriz_arvore_minima.imprimir_matriz();
-    }
     void copiar_matriz(Matriz *copia, Matriz base)
     {
         copia->instanciar(base.nr_linhas, base.nr_colunas);
@@ -341,16 +292,10 @@ typedef struct
             }
         }
     }
-
     void liberar_memoria()
     {
         this->matriz_ppl.liberar_memoria();
-        // this->matriz_ligacao.liberar_memoria();
-        // this->matriz_ligacao_ponderada.liberar_memoria();
-        // this->matriz_adj.liberar_memoria();
-        // this->matriz_adj_ponderada.liberar_memoria();
-        // this->matriz_arvore_minima.liberar_memoria();
-        // this->matriz_inc.liberar_memoria();
+        this->matriz_tablo.liberar_memoria();
     }
 
 } Tablo;
