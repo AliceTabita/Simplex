@@ -136,20 +136,21 @@ typedef struct
             cout << "Legenda:" << endl;
             cout << "S: sinal(0 : = ; 1 : <= ; 2:>= )" << endl;
             cout << "C: constante" << endl;
-            cout << right << setw(2) << right << setw(2) << "0" << right << setw(2) << "|";
+            cout << right << setw(5) << right << setw(5) << "0" << right << setw(5) << "|";
             for (int i = 1; i <= this->nr_colunas - 2; i++)
             {
-                cout << right << setw(2) << i << "x" << right << setw(2);
+                cout << right << setw(5) << i << "x" << right << setw(5);
             }
-            cout << right << setw(3) << "S" << right << setw(3);
-            cout << right << setw(3) << "C" << right << setw(3);
+            cout << right << setw(6) << "S" << right << setw(6);
+            cout << right << setw(6) << "C" << right << setw(6);
             cout << endl;
             for (int i = 0; i < this->nr_linhas; i++)
             {
-                cout << right << setw(2) << i + 1 << right << setw(2) << "|";
+                cout << right << setw(5) << i + 1 << right << setw(5) << "|";
                 for (int j = 0; j < this->nr_colunas; j++)
                 {
-                    cout << right << setw(3) << this->matriz[i][j] << right << setw(3);
+                    cout << setprecision(2);
+                    cout << right << setw(6) << this->matriz[i][j] << right << setw(6);
                 }
                 cout << endl;
             }
@@ -257,10 +258,7 @@ typedef struct
         this->matriz_ppl.imprimir_matriz();
         this->gerar_tablo();
         this->matriz_tablo.imprimir_matriz();
-        this->verifica_negativo();
-        this->verifica_menor_linha();
         executa_simplex();
-        matriz_tablo.imprimir_matriz();
         this->in_tudo_certo = true;
     }
     void gerar_tablo()
@@ -291,7 +289,7 @@ typedef struct
             this->matriz_tablo.matriz[i + 1][i + nr_variavel] = 1;
         }
     }
-    void verifica_negativo()
+    bool verifica_negativo()
     {
         float menor = 0;
         for (int i = 0; i < this->matriz_tablo.nr_colunas - 1; i++)
@@ -305,42 +303,70 @@ typedef struct
         if (menor >= 0)
         {
             this->menor_indice_col = -1;
+            return false;
         }
         cout << "menor: " << menor << endl;
+        return true;
     }
     void verifica_menor_linha()
     {
         float divisao = 0;
-        float menor = this->matriz_tablo.matriz[1][this->menor_indice_col]; // pula a primeira linha que é da função objetivo
+        float menor = 0;
         for (int i = 1; i < this->matriz_tablo.nr_linhas; i++)
         {
-            if (this->matriz_tablo.matriz[i][this->menor_indice_col] > 0)
+            divisao = this->matriz_tablo.matriz[i][this->matriz_tablo.nr_colunas - 1] / (this->matriz_tablo.matriz[i][this->menor_indice_col]);
+            if (menor == 0 && divisao > 0)
             {
-                divisao = (this->matriz_tablo.matriz[i][this->menor_indice_col]) / this->matriz_tablo.matriz[i][this->matriz_tablo.nr_colunas - 1];
-                if (divisao < menor)
-                {
-                    menor = divisao;
-                    this->menor_indice_linha = i;
-                };
+                this->menor_indice_linha = i;
+                menor = divisao;
             }
+            if (divisao <= menor && divisao > 0 && menor >= 0)
+            {
+                this->menor_indice_linha = i;
+                menor = divisao;
+            };
         }
-        cout << "menor valor: " << divisao << endl;
+        cout << "menor valor: " << menor << endl;
         cout << "menor col: " << menor_indice_col << endl;
         cout << "menor linha: " << menor_indice_linha << endl;
     }
     void executa_linha_pivo()
     {
         float divisor = matriz_tablo.matriz[menor_indice_linha][menor_indice_col];
-        cout << "divisor" << matriz_tablo.matriz[1][0] << endl;
-        // for (int i = 0; i < matriz_tablo.nr_colunas; i++)
-        // {
-        //     matriz_tablo.matriz[menor_indice_linha][i] = round(matriz_tablo.matriz[menor_indice_linha][i] / divisor);
-        // }
+        cout << "divisor" << divisor << endl;
+        for (int i = 0; i < matriz_tablo.nr_colunas; i++)
+        {
+            matriz_tablo.matriz[menor_indice_linha][i] = matriz_tablo.matriz[menor_indice_linha][i] / divisor;
+        }
+    }
+    void executa_linhas_rest()
+    {
+        float nr_operacao;
+        for (int i = 0; i < matriz_tablo.nr_linhas; i++)
+        {
+            if (i != menor_indice_linha)
+            {
+                nr_operacao = matriz_tablo.matriz[i][menor_indice_col];
+                // cout << "nr operacao" << nr_operacao << endl;
+                // cout << "menor indice" << menor_indice_linha << endl;
+                for (int j = 0; j < matriz_tablo.nr_colunas; j++)
+                {
+                    matriz_tablo.matriz[i][j] = matriz_tablo.matriz[i][j] - (nr_operacao * matriz_tablo.matriz[menor_indice_linha][j]);
+                }
+            }
+        }
     }
     void executa_simplex()
     {
-        executa_linha_pivo();
-        // this->matriz_tablo_segunda.instanciar(nr_restricao + 1, (nr_variavel + nr_restricao + 1));
+        int cont = 0;
+        while (this->verifica_negativo())
+        {
+            this->verifica_menor_linha();
+            executa_linha_pivo();
+            executa_linhas_rest();
+            matriz_tablo.imprimir_matriz();
+            cont++;
+        }
     }
     void copiar_matriz(Matriz *copia, Matriz base)
     {
@@ -364,6 +390,6 @@ typedef struct
 int main(int argc, char *argv[])
 {
     Tablo tablo;
-    tablo.ler_grafo_de_arquivo("test2.txt");
+    tablo.ler_grafo_de_arquivo("test3.txt");
     return 0;
 }
