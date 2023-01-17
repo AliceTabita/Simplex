@@ -3,6 +3,7 @@
 #include <string>
 #include <iomanip>
 #include <cmath>
+#include <cstring>
 using namespace std;
 
 typedef struct Vetor
@@ -136,7 +137,7 @@ typedef struct
             cout << "Legenda:" << endl;
             cout << "S: sinal(0 : = ; 1 : <= ; 2:>= )" << endl;
             cout << "C: constante" << endl;
-            cout << right << setw(5) << right << setw(5) << "0" << right << setw(5) << "|";
+            // cout << right << setw(5) << right << setw(5) << "0" << right << setw(5) << "|";
             for (int i = 1; i <= this->nr_colunas - 2; i++)
             {
                 cout << right << setw(5) << i << "x" << right << setw(5);
@@ -146,7 +147,7 @@ typedef struct
             cout << endl;
             for (int i = 0; i < this->nr_linhas; i++)
             {
-                cout << right << setw(5) << i + 1 << right << setw(5) << "|";
+                // cout << right << setw(5) << i + 1 << right << setw(5) << "|";
                 for (int j = 0; j < this->nr_colunas; j++)
                 {
                     cout << setprecision(2);
@@ -155,6 +156,37 @@ typedef struct
                 cout << endl;
             }
         }
+    }
+    void imprimir_matriz_tablo()
+    {
+        if (!this->is_iniciada)
+        {
+            cout << "Matriz " << this->nm_matriz << " ainda não instânciada" << endl;
+        }
+        else
+        {
+            cout << "Matriz de " << this->nm_matriz << ":" << endl;
+            cout << "Legenda:" << endl;
+            cout << "C: constante" << endl;
+            cout << "X0: função objetivo" << endl;
+            for (int i = 1; i <= this->nr_colunas - 2; i++)
+            {
+                cout << right << setw(5) << i << "x" << right << setw(5);
+            }
+            cout << right << setw(6) << "C" << right << setw(6);
+            cout << right << setw(6) << "X" << right << setw(6);
+            cout << endl;
+            for (int i = 0; i < this->nr_linhas; i++)
+            {
+                for (int j = 0; j < this->nr_colunas; j++)
+                {
+                    cout << setprecision(2);
+                    cout << right << setw(6) << this->matriz[i][j] << right << setw(6);
+                }
+                cout << endl;
+            }
+        }
+        cout << endl;
     }
 } Matriz;
 
@@ -167,18 +199,18 @@ typedef struct
 
     Matriz matriz_ppl;
     Matriz matriz_tablo;
-    Matriz matriz_tablo_segunda;
 
-    int menor_indice_col = -1;
+    bool is_min = 0;
+    int indice_col = -1;
     int menor_indice_linha = 0;
 
-    void ler_grafo_de_arquivo(string nm_arquivo)
+    void ler_arquivo(string nm_arquivo)
     {
         this->nm_localizacao_arquivo = nm_arquivo;
 
         this->matriz_tablo.nm_matriz = "Tablo";
         this->matriz_ppl.nm_matriz = "Problema de programação linear";
-        string nr_variavel, nr_restricao, linha_lida;
+        string nr_variavel, nr_restricao, linha_lida, sinal;
 
         int negativo = 0;
         cout << "Iniciando leitura do arquivo " << nm_arquivo << endl;
@@ -188,6 +220,11 @@ typedef struct
         {
             cout << "Arquivo .txt nao pode ser aberto" << endl;
             abort();
+        }
+        getline(arq, sinal);
+        if (sinal == "-")
+        {
+            is_min = 1;
         }
         cout << "Lendo nr_variavel e nr_restricao" << endl;
         getline(arq, nr_variavel);
@@ -257,18 +294,18 @@ typedef struct
 
         this->matriz_ppl.imprimir_matriz();
         this->gerar_tablo();
-        this->matriz_tablo.imprimir_matriz();
+        this->matriz_tablo.imprimir_matriz_tablo();
         executa_simplex();
         this->in_tudo_certo = true;
     }
     void gerar_tablo()
     {
         cout << "gerando tablo" << endl;
-        this->matriz_tablo.instanciar(nr_restricao + 1, (nr_variavel + nr_restricao + 1));
+        this->matriz_tablo.instanciar(nr_restricao + 1, (nr_variavel + nr_restricao + 2));
         // inserindo os valores a partir da matriz do problema
         for (int i = 0; i < this->matriz_ppl.nr_linhas; i++)
         {
-            for (int j = 0; j < this->matriz_ppl.nr_colunas; j++)
+            for (int j = 0; j < this->matriz_ppl.nr_colunas - 1; j++)
             {
                 if (j == matriz_ppl.nr_colunas - 2)
                 {
@@ -280,9 +317,16 @@ typedef struct
                 }
             }
         }
-        for (int i = 0; i < this->matriz_tablo.nr_colunas; i++)
+        for (int i = 1; i < matriz_tablo.nr_linhas; i++)
         {
-            this->matriz_tablo.matriz[0][i] = (matriz_tablo.matriz[0][i] != 0) ? matriz_tablo.matriz[0][i] * (-1) : 0;
+            matriz_tablo.matriz[i][matriz_tablo.nr_colunas - 1] = nr_variavel + i;
+        }
+        if (!is_min)
+        {
+            for (int i = 0; i < this->matriz_tablo.nr_colunas; i++)
+            {
+                this->matriz_tablo.matriz[0][i] = (matriz_tablo.matriz[0][i] != 0) ? matriz_tablo.matriz[0][i] * (-1) : 0;
+            }
         }
         for (int i = 0; i < matriz_tablo.nr_linhas - 1; i++)
         {
@@ -292,52 +336,64 @@ typedef struct
     bool verifica_negativo()
     {
         float menor = 0;
-        for (int i = 0; i < this->matriz_tablo.nr_colunas - 1; i++)
+        for (int i = 0; i < this->matriz_tablo.nr_colunas - 2; i++)
         {
             if (this->matriz_tablo.matriz[0][i] < menor)
             {
                 menor = this->matriz_tablo.matriz[0][i];
-                this->menor_indice_col = i;
+                this->indice_col = i;
             }
         }
         if (menor >= 0)
         {
-            this->menor_indice_col = -1;
+            this->indice_col = -1;
             return false;
         }
-        cout << "menor: " << menor << endl;
         return true;
     }
-    void verifica_menor_linha()
+    bool verifica_menor_linha()
     {
         float divisao = 0;
         float menor = 0;
+        menor_indice_linha = -1;
         for (int i = 1; i < this->matriz_tablo.nr_linhas; i++)
         {
-            divisao = this->matriz_tablo.matriz[i][this->matriz_tablo.nr_colunas - 1] / (this->matriz_tablo.matriz[i][this->menor_indice_col]);
-            if (menor == 0 && divisao > 0)
+            if ((this->matriz_tablo.matriz[i][this->indice_col]) != 0)
             {
-                this->menor_indice_linha = i;
-                menor = divisao;
+                divisao = this->matriz_tablo.matriz[i][this->matriz_tablo.nr_colunas - 2] / (this->matriz_tablo.matriz[i][this->indice_col]);
+                if (menor == 0 && divisao > 0)
+                {
+                    this->menor_indice_linha = i;
+                    menor = divisao;
+                }
+                if (divisao <= menor && divisao > 0 && menor > 0)
+                {
+                    this->menor_indice_linha = i;
+                    menor = divisao;
+                };
             }
-            if (divisao <= menor && divisao > 0 && menor >= 0)
-            {
-                this->menor_indice_linha = i;
-                menor = divisao;
-            };
         }
-        cout << "menor valor: " << menor << endl;
-        cout << "menor col: " << menor_indice_col << endl;
+        if (menor_indice_linha < 0)
+        {
+            cout << "Solução Ilimitada" << endl;
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+        cout << "menor col: " << indice_col << endl;
         cout << "menor linha: " << menor_indice_linha << endl;
     }
     void executa_linha_pivo()
     {
-        float divisor = matriz_tablo.matriz[menor_indice_linha][menor_indice_col];
-        cout << "divisor" << divisor << endl;
-        for (int i = 0; i < matriz_tablo.nr_colunas; i++)
+        float divisor = matriz_tablo.matriz[menor_indice_linha][indice_col];
+        // cout << "divisor" << divisor << endl;
+        for (int i = 0; i < matriz_tablo.nr_colunas - 1; i++)
         {
             matriz_tablo.matriz[menor_indice_linha][i] = matriz_tablo.matriz[menor_indice_linha][i] / divisor;
         }
+        matriz_tablo.matriz[menor_indice_linha][matriz_tablo.nr_colunas - 1] = indice_col + 1;
     }
     void executa_linhas_rest()
     {
@@ -346,10 +402,10 @@ typedef struct
         {
             if (i != menor_indice_linha)
             {
-                nr_operacao = matriz_tablo.matriz[i][menor_indice_col];
+                nr_operacao = matriz_tablo.matriz[i][indice_col];
                 // cout << "nr operacao" << nr_operacao << endl;
                 // cout << "menor indice" << menor_indice_linha << endl;
-                for (int j = 0; j < matriz_tablo.nr_colunas; j++)
+                for (int j = 0; j < matriz_tablo.nr_colunas - 1; j++)
                 {
                     matriz_tablo.matriz[i][j] = matriz_tablo.matriz[i][j] - (nr_operacao * matriz_tablo.matriz[menor_indice_linha][j]);
                 }
@@ -358,16 +414,92 @@ typedef struct
     }
     void executa_simplex()
     {
-        int cont = 0;
-        while (this->verifica_negativo())
+        while (this->verifica_negativo() && this->verifica_menor_linha())
         {
-            this->verifica_menor_linha();
             executa_linha_pivo();
             executa_linhas_rest();
-            matriz_tablo.imprimir_matriz();
-            cont++;
+            matriz_tablo.imprimir_matriz_tablo();
+        }
+        if (is_min)
+        {
+            matriz_tablo.matriz[0][matriz_tablo.nr_colunas - 2] = matriz_tablo.matriz[0][matriz_tablo.nr_colunas - 2] * (-1);
+        }
+        solucao();
+    }
+    bool existe_base(int x)
+    {
+        for (int i = 1; i < matriz_tablo.nr_linhas; i++)
+        {
+            if (matriz_tablo.matriz[i][matriz_tablo.nr_colunas - 1] == x + 1)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    void solucao_alternativa()
+    {
+        verifica_menor_linha();
+        executa_linha_pivo();
+        executa_linhas_rest();
+        cout << "SOLUÇÃO ALTERNATIVA" << endl;
+        matriz_tablo.imprimir_matriz_tablo();
+    }
+    void is_multiplas()
+    {
+        int col = matriz_tablo.nr_colunas;
+        for (int i = 0; i < nr_variavel; i++)
+        {
+            if (matriz_tablo.matriz[0][i] == 0 && !existe_base(i))
+            {
+                cout << "Multiplas soluções ótimas: "
+                     << "x" << i + 1 << " é nulo em z" << endl;
+                this->indice_col = i;
+                solucao_alternativa();
+            }
         }
     }
+    void solucao()
+    {
+        int col = matriz_tablo.nr_colunas;
+        int valX;
+        string resultado = "";
+        for (int i = 1; i < matriz_tablo.nr_linhas; i++)
+        {
+            valX = matriz_tablo.matriz[i][col - 1];
+            if (valX <= nr_variavel)
+            {
+                resultado.append(to_string(matriz_tablo.matriz[i][col - 2])).append(" X").append(to_string(valX)).append(" + ");
+            }
+        }
+        resultado.append(" = ").append(to_string(matriz_tablo.matriz[0][col - 2]));
+        cout << "Resultado: " << endl;
+        cout << resultado << endl;
+        is_multiplas();
+    }
+    // bool restricoes_iguais()
+    // {
+    //     int nr_col = matriz_ppl.nr_colunas;
+    //     int tipo = matriz_ppl.matriz[1][nr_col - 2];
+    //     int cont = 0;
+    //     bool tudo_igual = true;
+    //     for (int i = 2; i < nr_col; i++)
+    //     {
+    //         if (matriz_ppl.matriz[i][nr_col - 2] != tipo)
+    //         {
+    //             tudo_igual = false;
+    //             cont++;
+    //         }
+    //     }
+    //     return tudo_igual;
+    // }
+    // void normalizacao()
+    // {
+    //     if (restricoes_iguais() && matriz_ppl.matriz[1][matriz_ppl.nr_colunas - 2] == 1)
+    //     {
+    //         gerar_tablo();
+    //     }
+    // }
     void copiar_matriz(Matriz *copia, Matriz base)
     {
         copia->instanciar(base.nr_linhas, base.nr_colunas);
@@ -390,6 +522,9 @@ typedef struct
 int main(int argc, char *argv[])
 {
     Tablo tablo;
-    tablo.ler_grafo_de_arquivo("test3.txt");
+    string resposta;
+    cout << "Informe o arquivo .txt e seu caminho se necessário (exemplo.txt))" << endl;
+    cin >> resposta;
+    tablo.ler_arquivo(resposta);
     return 0;
 }
